@@ -1,0 +1,39 @@
+service: podcast-clipper-transcoder-lambda
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  environment:
+    S3_AUDIO_BUCKET: ${self:service}-records
+    S3_TRANSCODE_BUCKET: ${self:service}-transcode
+    LANGUAGE_CODE: en-US
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:GetObject
+      Resource:
+        - 'arn:aws:s3:::${self:provider.environment.S3_AUDIO_BUCKET}/*'
+        - 'arn:aws:s3:::${self:provider.environment.S3_TRANSCODE_BUCKET}/*'
+    - Effect: Allow
+      Action:
+        - elastictranscoder:CreateJob
+      Resource: '*'
+
+plugins:
+  - serverless-plugin-typescript
+
+functions:
+  transcode:
+    handler: handler.transcode
+    events:
+      - s3:
+          bucket: ${self:provider.environment.S3_AUDIO_BUCKET}
+          event: s3:ObjectCreated:*
+
+resources:
+  Resources:
+    S3TranscodeBucket:
+      Type: 'AWS::S3::Bucket'
+      Properties:
+        BucketName: ${self:provider.environment.S3_TRANSCODE_BUCKET}
